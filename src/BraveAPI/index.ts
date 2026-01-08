@@ -1,6 +1,6 @@
 import type { Endpoints } from './types.js';
 import config from '../config.js';
-import { stringify } from '../utils.js';
+import { fetchWithRetry, stringify } from '../utils.js';
 
 const typeToPathMap: Record<keyof Endpoints, string> = {
   images: '/res/v1/images/search',
@@ -88,10 +88,10 @@ async function issueRequest<T extends keyof Endpoints>(
     }
   }
 
-  // Issue Request
+  // Issue Request with automatic retry on rate limit
   const urlWithParams = url.toString() + '?' + queryParams.toString();
   const headers = { ...getDefaultRequestHeaders(), ...requestHeaders } as Headers;
-  const response = await fetch(urlWithParams, { headers });
+  const response = await fetchWithRetry(urlWithParams, { headers });
 
   // Handle Error
   if (!response.ok) {
