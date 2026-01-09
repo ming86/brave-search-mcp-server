@@ -7,9 +7,9 @@ import SummarizerTool from './summarizer/index.js';
 
 export default {
   WebSearchTool,
-  LocalSearchTool,
-  VideoSearchTool,
-  ImageSearchTool,
-  NewsSearchTool,
-  SummarizerTool,
+  // LocalSearchTool,
+  // VideoSearchTool,
+  // ImageSearchTool,
+  // NewsSearchTool,
+  // SummarizerTool,
 };
