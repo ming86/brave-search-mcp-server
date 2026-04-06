@@ -1,6 +1,6 @@
-FROM node:alpine@sha256:fd164609b5ab0c6d49bac138ae06c347e72261ec6ae1de32b6aa9f5ee2271110 AS builder
+FROM node:alpine@sha256:5209bcaca9836eb3448b650396213dbe9d9a34d31840c2ae1f206cb2986a8543 AS builder
 
-RUN apk add --no-cache openssl=3.5.4-r0
+RUN apk add --no-cache openssl=3.5.5-r0
 
 WORKDIR /app
 
@@ -14,9 +14,9 @@ COPY ./tsconfig.json ./tsconfig.json
 
 RUN npm run build
 
-FROM node:alpine@sha256:fd164609b5ab0c6d49bac138ae06c347e72261ec6ae1de32b6aa9f5ee2271110 AS release
+FROM node:alpine@sha256:5209bcaca9836eb3448b650396213dbe9d9a34d31840c2ae1f206cb2986a8543 AS release
 
-RUN apk add --no-cache openssl=3.5.4-r0
+RUN apk add --no-cache openssl=3.5.5-r0
 
 WORKDIR /app
 
@@ -30,4 +30,4 @@ RUN npm ci --ignore-scripts --omit-dev
 
 USER node
 
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["node", "dist/index.js"]

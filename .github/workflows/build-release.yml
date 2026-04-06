@@ -15,11 +15,11 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.head_ref }}
 
-      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
@@ -34,7 +34,7 @@ jobs:
 
       # Install latest version of jq
       - name: Install latest version of jq to populate Marketplace Catalog StartChangeSet to publish new revision
-        uses: vegardit/gha-setup-jq@491c577e0d5e6512cf02b06cf439b1fc4165aad1 # v1.0.0
+        uses: vegardit/gha-setup-jq@fae9c6aa0b21dbe5bd3b77d280cf142e0a0a65b4 # 1.1.0
         with:
           version: "latest"
 
@@ -59,8 +59,10 @@ jobs:
       - name: Generate Changelog
         id: changelog
         run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
           echo "# Changelog for ${{ steps.bump-version.outputs.tag }}" > ${{ github.workspace }}/RELEASE_NOTES.md
           echo "* Updated version" >> ${{ github.workspace }}/RELEASE_NOTES.md
+          echo "${COMMIT_MESSAGE}" >> ${{ github.workspace }}/RELEASE_NOTES.md
           echo "release_notes<<EOF" >> $GITHUB_OUTPUT
           cat ${{ github.workspace }}/RELEASE_NOTES.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -82,14 +84,14 @@ jobs:
       # DockerHub authentication
       - name: Login to Docker Hub
         id: login-docker
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # AWS Marketplace ECR authentication
       - name: Configure AWS Credentials to deploy to AWS Marketplace ECR
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
           role-to-assume: ${{ secrets.MARKETPL_AWS_IAM_ROLE_ARN }}
           aws-region: us-east-1
@@ -103,17 +105,17 @@ jobs:
       # Build docker image to support multi-architecture (https://aws.amazon.com/blogs/containers/introducing-multi-architecture-container-images-for-amazon-ecr/)
       # Extend Docker build capabilities by using Buildx (https://github.com/docker/buildx)
       - name: Set up QEMU to support multi-architecute builds
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: Set GitHub short SHA Tag
         id: vars
         run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Validate Docker Build Configuration
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           call: check
 
@@ -125,7 +127,7 @@ jobs:
           MARKETPL_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           MARKETPL_REPOSITORY: brave/brave-search-mcp
           IMAGE_RELEASE_TAG: ${{ steps.bump-version.outputs.tag }}
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           platforms: linux/amd64,linux/aarch64
           push: true
@@ -143,7 +145,7 @@ jobs:
       # Reference: https://github.com/modelcontextprotocol/registry/blob/main/docs/guides/publishing/publish-server.md
       - name: Install MCP Publisher
         run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.4.0/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.5.0/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
 
       - name: Login to MCP Registry
         run: ./mcp-publisher login github-oidc
@@ -157,7 +159,7 @@ jobs:
         env:
           IMAGE_RELEASE_TAG: ${{ steps.bump-version.outputs.tag }}
         run: |
-          jq --arg tag "$IMAGE_RELEASE_TAG" '.ChangeSet[].DetailsDocument.Version.VersionTitle = "Release Version \($tag)' marketplace-revision-release.json > tmp.json && mv tmp.json marketplace-revision-release.json
+          jq --arg tag "$IMAGE_RELEASE_TAG" '.ChangeSet[].DetailsDocument.Version.VersionTitle = "Release Version \($tag)"' marketplace-revision-release.json > tmp.json && mv tmp.json marketplace-revision-release.json
           jq --arg tag "$IMAGE_RELEASE_TAG" '.ChangeSetTags[] |= (if .Key == "Release" then .Value = $tag else . end)' marketplace-revision-release.json > tmp.json && mv tmp.json marketplace-revision-release.json
        # Update Release Notes 
       - name: Update Release Notes in marketplace-revision-release.json
